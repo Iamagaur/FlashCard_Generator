@@ -1,23 +1,16 @@
+# app.py
 import streamlit as st
 import PyPDF2
 import pandas as pd
 import os
 from huggingface_hub import InferenceClient
 
-# 🔑 Replace this with your Hugging Face token
-
-import os
+# Load Hugging Face token from environment (set in Streamlit secrets)
 HF_TOKEN = os.environ.get("HF_TOKEN")
-if not HF_TOKEN:
-    st.error("🚨 Hugging Face token is missing! Set HF_TOKEN in Settings → Secrets.")
-    st.stop()
 
-
-
-# Load the Zephyr-7B model (works with Hugging Face Inference API)
+# Setup inference client using flan-t5-large (free + public)
 client = InferenceClient(model="google/flan-t5-large", token=HF_TOKEN)
 
-# 📄 Extract text from uploaded PDF
 def extract_text_from_pdf(file):
     reader = PyPDF2.PdfReader(file)
     text = ""
@@ -27,59 +20,51 @@ def extract_text_from_pdf(file):
             text += page_text + "\n"
     return text
 
-# 🧠 Generate flashcards using LLM
-def generate_flashcards(text, max_flashcards=8):
+def generate_flashcards(text, max_flashcards=5):
     short_text = text[:1000]
     prompt = (
-        f"<|user|>\n"
-        f"You are a tutor. Generate {max_flashcards} flashcards from this text:\n\n"
-        f"{short_text}\n\n"
-        f"Use this format only:\n"
-        f"Q: ...\nA: ...\n\n"
-        f"Return flashcards only.\n<|assistant|>\n"
+        f"Generate {max_flashcards} flashcards from the following text.\n"
+        f"Format each as:\nQ: question\nA: answer\n\n"
+        f"Text:\n{short_text}"
     )
-
     response = client.text_generation(
         prompt=prompt,
         max_new_tokens=512,
         temperature=0.7
     )
-
     return response
 
-# 📊 Parse text into flashcard pairs
-def parse_flashcards(text_output):
-    lines = text_output.strip().split("\n")
-    cards = []
-    question = answer = None
+def parse_flashcards(output):
+    lines = output.strip().split("\n")
+    flashcards = []
+    question = answer = ""
     for line in lines:
-        if "Q:" in line:
-            question = line.split("Q:", 1)[1].strip()
-        elif "A:" in line:
-            answer = line.split("A:", 1)[1].strip()
+        if line.startswith("Q:"):
+            question = line[2:].strip()
+        elif line.startswith("A:"):
+            answer = line[2:].strip()
             if question and answer:
-                cards.append({"Question": question, "Answer": answer})
-                question = answer = None
-    return pd.DataFrame(cards)
+                flashcards.append({"Question": question, "Answer": answer})
+                question, answer = "", ""
+    return pd.DataFrame(flashcards)
 
-# 🚀 Streamlit Web UI
+# --- Streamlit UI ---
 st.set_page_config(page_title="Flashcard Generator", layout="centered")
-st.title("📚 LLM Flashcard Generator")
+st.title("🧠 LLM Flashcard Generator")
 
-uploaded_file = st.file_uploader("📁 Upload your textbook (PDF)", type=["pdf"])
+uploaded_file = st.file_uploader("📄 Upload a PDF textbook:", type=["pdf"])
 
 if uploaded_file:
-    st.success("PDF uploaded! Extracting content...")
+    st.success("File uploaded successfully!")
     pdf_text = extract_text_from_pdf(uploaded_file)
 
     if st.button("⚡ Generate Flashcards"):
-        with st.spinner("Thinking..."):
-            output = generate_flashcards(pdf_text)
-            df = parse_flashcards(output)
+        with st.spinner("Generating flashcards..."):
+            raw_output = generate_flashcards(pdf_text)
+            df = parse_flashcards(raw_output)
 
-        st.success("✅ Flashcards generated successfully!")
+        st.success("✅ Flashcards generated!")
         st.dataframe(df)
 
-        # 📥 Download buttons
-        st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode(), "flashcards.csv", "text/csv")
-        st.download_button("⬇️ Download JSON", df.to_json(orient="records", indent=2).encode(), "flashcards.json", "application/json")
+        st.download_button("⬇ Download CSV", df.to_csv(index=False).encode(), "flashcards.csv")
+        st.download_button("⬇ Download JSON", df.to_json(orient="records", indent=2).encode(), "flashcards.json")
