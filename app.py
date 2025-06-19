@@ -5,7 +5,9 @@ import os
 from huggingface_hub import InferenceClient
 
 # 🔑 Replace this with your Hugging Face token
-HF_TOKEN = "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"
+
+HF_TOKEN = os.environ.get("HF_TOKEN")  # Securely get from Streamlit Secrets
+
 
 # Load the Zephyr-7B model (works with Hugging Face Inference API)
 client = InferenceClient(model="HuggingFaceH4/zephyr-7b-beta", token=HF_TOKEN)
