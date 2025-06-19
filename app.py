@@ -15,7 +15,7 @@ if not HF_TOKEN:
 
 
 # Load the Zephyr-7B model (works with Hugging Face Inference API)
-client = InferenceClient(model="tiiuae/falcon-7b-instruct", token=HF_TOKEN)
+client = InferenceClient(model="HuggingFaceH4/zephyr-7b-alpha", token=HF_TOKEN)
 
 # 📄 Extract text from uploaded PDF
 def extract_text_from_pdf(file):
