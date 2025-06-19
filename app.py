@@ -6,7 +6,12 @@ from huggingface_hub import InferenceClient
 
 # 🔑 Replace this with your Hugging Face token
 
-HF_TOKEN = os.environ.get("HF_TOKEN")  # Securely get from Streamlit Secrets
+import os
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    st.error("🚨 Hugging Face token is missing! Set HF_TOKEN in Settings → Secrets.")
+    st.stop()
+
 
 
 # Load the Zephyr-7B model (works with Hugging Face Inference API)
