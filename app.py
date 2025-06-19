@@ -9,7 +9,7 @@ if not HF_TOKEN:
     st.error("⚠️ Hugging Face token not found. Set it in Streamlit secrets.")
     st.stop()
 
-client = InferenceClient(model="mrm8488/t5-base-finetuned-question-generation-ap", token=HF_TOKEN)
+client = InferenceClient(model="google/flan-t5-base", token=HF_TOKEN)
 
 def extract_text_from_pdf(file):
     reader = PyPDF2.PdfReader(file)
